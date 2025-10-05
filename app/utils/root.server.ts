@@ -8,6 +8,7 @@ import type {
 import invariant from "tiny-invariant";
 import type { EnhancedMenu } from "~/types/menu";
 import { seoPayload } from "~/utils/seo.server";
+import { getNavigationForRoute } from "~/utils/unified-navigation";
 
 /**
  * Load data necessary for rendering content above the fold. This is the critical data
@@ -17,11 +18,13 @@ export async function loadCriticalData({
   request,
   context,
 }: LoaderFunctionArgs) {
-  const [layout, swatchesConfigs, weaverseTheme] = await Promise.all([
+  const [layout, swatchesConfigs, weaverseTheme, navigation] = await Promise.all([
     getLayoutData(context),
     getSwatchesConfigs(context),
     // Add other queries here, so that they are loaded in parallel
     context.weaverse.loadThemeSettings(),
+    // Load unified navigation data
+    getNavigationForRoute(context.storefront).catch(() => null),
   ]);
 
   const seo = seoPayload.root({ shop: layout.shop, url: request.url });
@@ -46,6 +49,7 @@ export async function loadCriticalData({
     weaverseTheme,
     googleGtmID: env.PUBLIC_GOOGLE_GTM_ID,
     swatchesConfigs,
+    navigation, // Add unified navigation data
   };
 }
 

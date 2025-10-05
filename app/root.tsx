@@ -22,7 +22,6 @@ import {
 } from "react-router";
 import { Footer } from "./components/layout/footer";
 import { Header } from "./components/layout/header";
-import { ScrollingAnnouncement } from "./components/layout/scrolling-announcement";
 import {
   NewsletterPopup,
   useShouldRenderNewsletterPopup,
@@ -138,7 +137,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     Skip to content
                   </a>
                 </div>
-                <ScrollingAnnouncement />
                 <Header />
                 <main id="mainContent" className="grow">
                   {children}

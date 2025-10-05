@@ -64,6 +64,7 @@
   --animate-marquee: marquee var(--marquee-duration, 15s) linear infinite;
   --animate-underline-toggle: underline-toggle 400ms linear;
   --animate-fade-in: fade-in var(--fade-in-duration, 0.5s) ease-in forwards;
+  --animate-header-fade: header-fade 0.3s ease-in-out;
   --animate-expand: expand var(--expand-duration, 0.3s)
     cubic-bezier(0.87, 0, 0.13, 1) forwards;
   --animate-collapse: collapse var(--collapse-duration, 0.3s)
@@ -78,13 +79,45 @@
     var(--enter-from-right-duration, 0.3s) ease-out forwards;
   --animate-enter-from-top: enter-from-top var(--enter-from-top-duration, 0.3s)
     ease-out forwards;
+  --animate-slide-down: slideDown 0.3s ease-out forwards;
+  --animate-slide-up: slideUp 0.3s ease-out forwards;
 
+  @keyframes slideDown {
+    0% {
+      opacity: 0;
+      transform: translateY(-10px) translateX(-50%);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) translateX(-50%);
+    }
+  }
+  @keyframes slideUp {
+    0% {
+      opacity: 1;
+      transform: translateY(0) translateX(-50%);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-10px) translateX(-50%);
+    }
+  }
   @keyframes fade-in {
     0% {
       opacity: 0;
     }
     100% {
       opacity: 1;
+    }
+  }
+  @keyframes header-fade {
+    0% {
+      background-color: transparent;
+      backdrop-filter: blur(0px);
+    }
+    100% {
+      background-color: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
     }
   }
   @keyframes expand {
