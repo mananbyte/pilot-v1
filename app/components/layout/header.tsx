@@ -119,7 +119,7 @@ export function Header() {
           
           {/* Logo */}
           <div className="flex items-center">
-            <Logo />
+            <Logo isTransparent={isTransparent} />
           </div>
 
           {/* Desktop Navigation */}
@@ -164,10 +164,9 @@ function EnhancedDesktopMenu({ isTransparent }: { isTransparent: boolean }) {
   const brandNavigation: NavigationItem[] = React.useMemo(() => {
     if (!navigationData?.categories || Object.keys(navigationData.categories).length === 0) {
       // Pure Shopify mode - show minimal navigation when no collections exist
-      // This encourages you to add real collections to see them appear!
       return [
-        { id: "collections", title: "COLLECTIONS", to: "/collections" },
-        { id: "search", title: "SEARCH", to: "/search" }
+        { id: "sale", title: "SALE", to: "/collections/sale", badge: "SALE", color: "text-red-500" },
+        { id: "collections", title: "COLLECTIONS", to: "/collections" }
       ];
     }
 

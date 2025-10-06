@@ -99,72 +99,15 @@ export class UnifiedNavigationSystem {
     // Start with empty categories - Pure Shopify mode
     const mergedCategories: Record<string, CategoryConfig> = {};
 
-    // Build navigation ONLY from real Shopify data
-    shopifyAnalysis.availableCategories.forEach((categoryKey: string) => {
-      const templateCategory = navigationTemplate[categoryKey];
-      const shopifyProductTypes = shopifyAnalysis.availableProductTypes[categoryKey] || [];
-
-      // Only create category if it exists in Shopify
-      mergedCategories[categoryKey] = {
-        available: true,
-        displayName: templateCategory?.displayName || categoryKey.toUpperCase(),
-        subcategories: {
-          newArrivals: [],
-          allProducts: [],
-          categories: [],
-          seasonal: []
-        }
-      };
-
-      const category = mergedCategories[categoryKey];
-
-      // Add main category link
-      category.subcategories.allProducts.push({
-        title: `All ${category.displayName}`,
-        to: `/collections/${categoryKey}`,
-        badge: "FEATURED",
-        available: true
-      });
-
-      // Add detected product types from Shopify
-      shopifyProductTypes.forEach((productType: string) => {
-        category.subcategories.allProducts.push({
-          title: `All ${this.formatProductType(productType)}`,
-          to: `/collections/${categoryKey}/${productType}`,
-          available: true
-        });
-      });
-
-      // Add new arrivals if detected
-      if (shopifyAnalysis.newCollections.some((handle: string) => handle.startsWith(categoryKey))) {
-        category.subcategories.newArrivals.push({
-          title: `New ${category.displayName}`,
-          to: `/collections/${categoryKey}/new`,
-          badge: "NEW",
-          available: true
-        });
-
-        // Add new product types
-        shopifyProductTypes.forEach((productType: string) => {
-          category.subcategories.newArrivals.push({
-            title: `New ${this.formatProductType(productType)}`,
-            to: `/collections/${categoryKey}/new/${productType}`,
-            badge: "NEW",
-            available: true
-          });
-        });
+    // Use enhanced navigation with FIXED 4-section structure + DYNAMIC Shopify content
+    const enhancedCategories = this.navigationManager.buildEnhancedNavigation();
+    
+    // Only return categories that have collections (Pure Shopify mode)
+    Object.keys(enhancedCategories).forEach(categoryKey => {
+      const category = enhancedCategories[categoryKey];
+      if (category.available) {
+        mergedCategories[categoryKey] = category;
       }
-
-      // Add seasonal collections if detected
-      shopifyAnalysis.availableSeasons.forEach((season: string) => {
-        const seasonEmoji = season === 'summer' ? '🌞' : season === 'winter' ? '❄️' : '🌸';
-        category.subcategories.seasonal.push({
-          title: `${season.charAt(0).toUpperCase() + season.slice(1)} Collection`,
-          to: `/collections/${categoryKey}/${season}`,
-          icon: seasonEmoji,
-          available: true
-        });
-      });
     });
 
     // Determine source - Pure Shopify mode

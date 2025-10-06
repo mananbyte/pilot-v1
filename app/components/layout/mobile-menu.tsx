@@ -18,80 +18,156 @@ export function MobileMenu() {
   const rootData = useRouteLoaderData<RootLoader>("root");
   const navigationData = rootData?.navigation;
 
-  // Convert dynamic navigation to mobile-friendly format
+  // Convert dynamic navigation to mobile-friendly format  
   const brandNavigation = React.useMemo(() => {
-    if (!navigationData?.categories) {
-      // Fallback navigation when data is unavailable
+    if (!navigationData?.categories || Object.keys(navigationData.categories).length === 0) {
+      // Pure Shopify mode - minimal navigation when no collections exist
       return [
-        { id: "new", title: "NEW", to: "/collections/new", badge: "NEW" },
-        { id: "sale", title: "SALE", to: "/collections/sale", badge: "SALE", color: "text-red-500" },
-        { id: "men", title: "MEN'S", to: "/collections/mens", subcategories: [] },
-        { id: "women", title: "WOMEN'S", to: "/collections/womens", subcategories: [] },
-        { id: "accessories", title: "ACCESSORIES", to: "/collections/accessories", subcategories: [] },
+        { id: "sale", title: "SALE", to: "/collections/sale", badge: "SALE" },
         { id: "collections", title: "ALL COLLECTIONS", to: "/collections" }
       ];
     }
 
-    const navigation: any[] = [
-      { id: "new", title: "NEW", to: "/collections/new", badge: "NEW" },
-      { id: "sale", title: "SALE", to: "/collections/sale", badge: "SALE", color: "text-red-500" }
-    ];
+    // Fixed navigation structure: MEN'S, WOMEN'S, KIDS, SALE
+    const navigation: any[] = [];
 
-    // Convert each available category for mobile
-    Object.entries(navigationData.categories).forEach(([key, category]) => {
-      const typedCategory = category as CategoryConfig;
-      if (!typedCategory.available) return;
+    // Add main gender categories with fixed 4-section structure
+    const mainCategories = ['mens', 'womens', 'kids'];
+    
+    mainCategories.forEach(categoryKey => {
+      const category = navigationData.categories[categoryKey] as CategoryConfig;
+      
+      // Only show if category exists in Shopify OR if it's mens/womens (always show these)
+      if (category?.available || ['mens', 'womens'].includes(categoryKey)) {
+        const subcategories: any[] = [];
 
-      const subcategories: any[] = [];
-
-      // Add New Arrivals with fire emoji
-      const newItems = typedCategory.subcategories.newArrivals?.filter(item => item.available !== false) || [];
-      newItems.forEach(item => {
-        subcategories.push({
-          title: `🔥 ${item.title}`,
-          to: item.to,
-          badge: item.badge
+        // SECTION 1: NEW ARRIVALS (Fixed section header)
+        subcategories.push({ 
+          title: "NEW ARRIVALS", 
+          to: "#", 
+          divider: true, 
+          sectionHeader: true 
         });
-      });
-
-      if (newItems.length > 0 && (typedCategory.subcategories.allProducts?.length || typedCategory.subcategories.seasonal?.length)) {
-        subcategories.push({ title: "---", to: "#", divider: true });
-      }
-
-      // Add All Products
-      const allItems = typedCategory.subcategories.allProducts?.filter(item => item.available !== false) || [];
-      allItems.forEach(item => {
-        subcategories.push({
-          title: item.badge === 'FEATURED' ? `🌟 ${item.title}` : item.title,
-          to: item.to,
-          badge: item.badge,
-          featured: item.badge === 'FEATURED'
-        });
-      });
-
-      // Add seasonal divider if we have seasonal items
-      const seasonalItems = typedCategory.subcategories.seasonal?.filter(item => item.available !== false) || [];
-      if (seasonalItems.length > 0) {
-        subcategories.push({ title: "---", to: "#", divider: true, dividerText: "Seasonal Collections" });
         
-        seasonalItems.forEach(item => {
+        if (category?.subcategories.newArrivals?.length) {
+          category.subcategories.newArrivals
+            .filter(item => item.available !== false)
+            .forEach(item => {
+              subcategories.push({
+                title: `🔥 ${item.title}`,
+                to: item.to,
+                badge: item.badge
+              });
+            });
+        } else {
           subcategories.push({
-            title: item.title, // Already has emoji from config
-            to: item.to,
-            badge: item.badge
+            title: "No new arrivals yet",
+            to: "#",
+            disabled: true,
+            className: "text-gray-400 italic"
           });
+        }
+
+        // SECTION 2: ALL PRODUCTS (Fixed section header)
+        subcategories.push({ 
+          title: "ALL PRODUCTS", 
+          to: "#", 
+          divider: true, 
+          sectionHeader: true 
+        });
+        
+        if (category?.subcategories.allProducts?.length) {
+          category.subcategories.allProducts
+            .filter(item => item.available !== false)
+            .forEach(item => {
+              subcategories.push({
+                title: item.badge === 'FEATURED' ? `🌟 ${item.title}` : item.title,
+                to: item.to,
+                badge: item.badge,
+                featured: item.badge === 'FEATURED'
+              });
+            });
+        } else {
+          subcategories.push({
+            title: "No collections yet",
+            to: "#",
+            disabled: true,
+            className: "text-gray-400 italic"
+          });
+        }
+
+        // SECTION 3: CATEGORIES (Fixed section header)  
+        subcategories.push({ 
+          title: "CATEGORIES", 
+          to: "#", 
+          divider: true, 
+          sectionHeader: true 
+        });
+        
+        if (category?.subcategories.categories?.length) {
+          category.subcategories.categories
+            .filter(item => item.available !== false)
+            .forEach(item => {
+              subcategories.push({
+                title: item.title,
+                to: item.to,
+                badge: item.badge
+              });
+            });
+        } else {
+          subcategories.push({
+            title: "No categories yet",
+            to: "#",
+            disabled: true,
+            className: "text-gray-400 italic"
+          });
+        }
+
+        // SECTION 4: SEASONAL (Fixed section header)
+        subcategories.push({ 
+          title: "SEASONAL", 
+          to: "#", 
+          divider: true, 
+          sectionHeader: true 
+        });
+        
+        if (category?.subcategories.seasonal?.length) {
+          category.subcategories.seasonal
+            .filter(item => item.available !== false)
+            .forEach(item => {
+              subcategories.push({
+                title: item.title, // Already has emoji from config
+                to: item.to,
+                badge: item.badge
+              });
+            });
+        } else {
+          subcategories.push({
+            title: "No seasonal collections yet",
+            to: "#",
+            disabled: true,
+            className: "text-gray-400 italic"
+          });
+        }
+
+        navigation.push({
+          id: categoryKey,
+          title: categoryKey === 'mens' ? "MEN'S" : 
+                categoryKey === 'womens' ? "WOMEN'S" : 
+                categoryKey === 'kids' ? "KIDS" : categoryKey.toUpperCase(),
+          to: `/collections/${categoryKey}`,
+          subcategories
         });
       }
-
-      navigation.push({
-        id: key,
-        title: typedCategory.displayName,
-        to: `/collections/${key}`,
-        subcategories
-      });
     });
 
-    navigation.push({ id: "collections", title: "ALL COLLECTIONS", to: "/collections" });
+    // Add SALE as final item
+    navigation.push({ 
+      id: "sale", 
+      title: "SALE", 
+      to: "/collections/sale", 
+      badge: "SALE" 
+    });
 
     return navigation;
   }, [navigationData]);
@@ -204,23 +280,50 @@ function MobileMenuItem({ item }: { item: any }) {
       </Collapsible.Trigger>
       <Collapsible.Content className="border-l-2 border-gray-200 ml-4 pl-4 space-y-1 pb-2">
         {subcategories.map((subItem: any, index: number) => {
-          // Handle divider items
-          if (subItem.divider) {
+          // Handle section headers (NEW ARRIVALS, ALL PRODUCTS, etc.)
+          if (subItem.sectionHeader) {
             return (
-              <div key={index} className="border-t border-gray-200 my-2 pt-2">
-                <span className="text-xs text-gray-400 uppercase tracking-wider">
-                  {subItem.dividerText || "All Products"}
+              <div key={index} className="border-t border-blue-200 my-3 pt-3 first:border-t-0 first:mt-0">
+                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">
+                  {subItem.title}
                 </span>
               </div>
             );
           }
 
+          // Handle regular dividers
+          if (subItem.divider && !subItem.sectionHeader) {
+            return (
+              <div key={index} className="border-t border-gray-200 my-2 pt-2">
+                <span className="text-xs text-gray-400 uppercase tracking-wider">
+                  {subItem.dividerText || ""}
+                </span>
+              </div>
+            );
+          }
+
+          // Handle disabled items (no collections yet)
+          if (subItem.disabled) {
+            return (
+              <div 
+                key={index} 
+                className={cn(
+                  "block py-2 text-sm pl-2",
+                  subItem.className || "text-gray-400 italic"
+                )}
+              >
+                {subItem.title}
+              </div>
+            );
+          }
+
+          // Handle regular navigation items
           return (
             <Dialog.Close key={subItem.to} asChild>
               <Link 
                 to={subItem.to} 
                 className={cn(
-                  "block py-2 text-sm transition-colors flex items-center gap-2",
+                  "block py-2 text-sm transition-colors flex items-center gap-2 pl-2 hover:bg-gray-50 rounded",
                   subItem.featured 
                     ? "text-blue-600 font-semibold hover:text-blue-800" 
                     : "text-gray-600 hover:text-blue-600"
@@ -235,6 +338,8 @@ function MobileMenuItem({ item }: { item: any }) {
                       : subItem.badge === "HOT"
                       ? "bg-orange-500 text-white"
                       : subItem.badge === "SCHOOL"
+                      ? "bg-blue-500 text-white"
+                      : subItem.badge === "FEATURED"
                       ? "bg-blue-500 text-white"
                       : "bg-red-500 text-white"
                   )}>

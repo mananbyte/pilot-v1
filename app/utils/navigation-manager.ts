@@ -8,7 +8,7 @@
 import type { Storefront } from '@shopify/hydrogen';
 import { navigationConfig, type NavigationItem, type CategoryConfig } from './navigation-config';
 
-// GraphQL query to get all available collections
+// Enhanced GraphQL query to get collections for 4-section structure
 const COLLECTIONS_QUERY = `#graphql
   query GetAllCollections($first: Int!) {
     collections(first: $first) {
@@ -18,7 +18,11 @@ const COLLECTIONS_QUERY = `#graphql
         title
         description
         updatedAt
-        productsCount
+        products(first: 1) {
+          nodes {
+            id
+          }
+        }
         metafields(identifiers: [
           {namespace: "custom", key: "category"},
           {namespace: "custom", key: "season"},
@@ -40,11 +44,13 @@ interface ShopifyCollection {
   title: string;
   description: string | null;
   updatedAt: string;
-  productsCount: number;
+  products: {
+    nodes: Array<{ id: string }>;
+  };
   metafields: Array<{
     key: string;
     value: string;
-  }>;
+  }> | null;
 }
 
 interface CollectionAnalysis {
@@ -100,7 +106,7 @@ export class NavigationManager {
 
     for (const collection of this.collectionsCache) {
       // Skip empty collections
-      if (collection.productsCount === 0) continue;
+      if (collection.products.nodes.length === 0) continue;
 
       // Detect main categories (mens, womens, kids, accessories)
       if (this.isMainCategory(collection.handle)) {
@@ -226,7 +232,7 @@ export class NavigationManager {
   }
 
   private hasMetafield(collection: ShopifyCollection, key: string, value?: string): boolean {
-    const metafield = collection.metafields.find(m => m.key === key);
+    const metafield = collection.metafields?.find(m => m && m.key === key);
     return value ? metafield?.value === value : !!metafield;
   }
 
@@ -245,7 +251,7 @@ export class NavigationManager {
 
   private hasProductsInCategory(category: string): boolean {
     return this.collectionsCache.some(c => 
-      c.handle.includes(category) && c.productsCount > 0
+      c.handle.includes(category) && c.products.nodes.length > 0
     );
   }
 
@@ -261,6 +267,176 @@ export class NavigationManager {
       newCollections: [],
       featuredCollections: [],
     };
+  }
+
+  /**
+   * 🏷️ Enhanced Shopify Tagging Strategy Methods
+   * These methods detect which section collections belong to based on tags
+   */
+
+  /**
+   * 🔍 Detect which category (mens/womens/kids) a collection belongs to
+   */
+  private detectCategoryFromCollection(collection: ShopifyCollection): string | null {
+    const handle = collection.handle.toLowerCase();
+    const title = collection.title.toLowerCase();
+
+    // Check handle first (most reliable)
+    if (handle.includes('men') || handle.includes('male')) return 'mens';
+    if (handle.includes('women') || handle.includes('female') || handle.includes('ladies')) return 'womens';
+    if (handle.includes('kid') || handle.includes('child') || handle.includes('boy') || handle.includes('girl')) return 'kids';
+
+    // Check metafields for category
+    const categoryMetafield = collection.metafields?.find(m => m && m.key === 'category');
+    if (categoryMetafield && categoryMetafield.value) {
+      const category = categoryMetafield.value.toLowerCase();
+      if (['men', 'mens', 'male'].includes(category)) return 'mens';
+      if (['women', 'womens', 'female', 'ladies'].includes(category)) return 'womens';
+      if (['kids', 'children', 'boys', 'girls'].includes(category)) return 'kids';
+    }
+
+    // Check title as last resort
+    if (title.includes('men')) return 'mens';
+    if (title.includes('women') || title.includes('ladies')) return 'womens';
+    if (title.includes('kid') || title.includes('child')) return 'kids';
+
+    return null; // Unclassified
+  }
+
+  /**
+   * 🏷️ Detect which section a collection belongs to based on tags and handle
+   */
+  private detectSectionFromCollection(collection: ShopifyCollection): 'new-arrivals' | 'categories' | 'seasonal' | 'all-products' {
+    const handle = collection.handle.toLowerCase();
+
+    // NEW ARRIVALS: Check for new/latest handle patterns or metafields
+    if (handle.includes('-new') || handle.includes('new-')) {
+      return 'new-arrivals';
+    }
+
+    const badgeMetafield = collection.metafields?.find(m => m && m.key === 'badge');
+    if (badgeMetafield && badgeMetafield.value && ['new', 'latest', 'fresh', 'arrival', 'arrivals'].includes(badgeMetafield.value.toLowerCase())) {
+      return 'new-arrivals';
+    }
+
+    // SEASONAL: Check for seasonal handle patterns or metafields
+    if (handle.includes('summer') || handle.includes('winter') || 
+        handle.includes('spring') || handle.includes('autumn')) {
+      return 'seasonal';
+    }
+
+    const seasonMetafield = collection.metafields?.find(m => m && m.key === 'season');
+    if (seasonMetafield && seasonMetafield.value && ['summer', 'winter', 'spring', 'autumn', 'fall', 'seasonal'].includes(seasonMetafield.value.toLowerCase())) {
+      return 'seasonal';
+    }
+
+    // CATEGORIES: Check for category metafields or handle patterns
+    const categoryMetafield = collection.metafields?.find(m => m && m.key === 'category');
+    if (categoryMetafield && categoryMetafield.value && ['formal', 'casual', 'traditional', 'ethnic', 'western'].includes(categoryMetafield.value.toLowerCase())) {
+      return 'categories';
+    }
+
+    // Default to all-products
+    return 'all-products';
+  }
+
+  /**
+   * 🎖️ Get badge from collection metafields
+   */
+  private getBadgeFromMetafields(collection: ShopifyCollection): 'NEW' | 'HOT' | 'SALE' | 'FEATURED' | 'SCHOOL' | undefined {
+    const badgeMetafield = collection.metafields?.find(m => m && m.key === 'badge');
+    if (!badgeMetafield || !badgeMetafield.value) return undefined;
+    
+    const badgeValue = badgeMetafield.value.toLowerCase();
+    
+    if (['new', 'latest'].includes(badgeValue)) return 'NEW';
+    if (['hot', 'trending'].includes(badgeValue)) return 'HOT';
+    if (['sale', 'discount'].includes(badgeValue)) return 'SALE';
+    if (['featured', 'bestseller'].includes(badgeValue)) return 'FEATURED';
+    if (['school', 'uniform'].includes(badgeValue)) return 'SCHOOL';
+    
+    return undefined;
+  }
+
+  /**
+   * 🏗️ Build navigation with FIXED 4-section structure + DYNAMIC content from Shopify
+   */
+  buildEnhancedNavigation(): Record<string, CategoryConfig> {
+    const categories: Record<string, CategoryConfig> = {};
+    
+    // Initialize fixed categories (always show MEN'S and WOMEN'S)
+    const mainCategories = ['mens', 'womens', 'kids'];
+    
+    mainCategories.forEach(categoryKey => {
+      categories[categoryKey] = {
+        available: false, // Will be set to true if we find collections
+        displayName: categoryKey === 'mens' ? "MEN'S" : 
+                   categoryKey === 'womens' ? "WOMEN'S" : 
+                   categoryKey === 'kids' ? "KIDS" : categoryKey.toUpperCase(),
+        subcategories: {
+          newArrivals: [],
+          allProducts: [],
+          categories: [],
+          seasonal: []
+        }
+      };
+    });
+
+    // Process each Shopify collection
+    this.collectionsCache.forEach(collection => {
+      const category = this.detectCategoryFromCollection(collection);
+      if (!category || !categories[category]) return;
+
+      // Mark category as available
+      categories[category].available = true;
+
+      // Determine which section this collection belongs to
+      const section = this.detectSectionFromCollection(collection);
+      const navigationItem: NavigationItem = {
+        title: collection.title,
+        to: `/collections/${collection.handle}`,
+        badge: this.getBadgeFromMetafields(collection),
+        available: true,
+        description: collection.description || undefined
+      };
+
+      // Add to appropriate section
+      switch (section) {
+        case 'new-arrivals':
+          categories[category].subcategories.newArrivals.push(navigationItem);
+          break;
+        case 'categories':
+          categories[category].subcategories.categories.push(navigationItem);
+          break;
+        case 'seasonal':
+          categories[category].subcategories.seasonal.push(navigationItem);
+          break;
+        default:
+          // Always add to all products (but avoid duplicates)
+          const exists = categories[category].subcategories.allProducts.find(
+            item => item.to === navigationItem.to
+          );
+          if (!exists) {
+            categories[category].subcategories.allProducts.push(navigationItem);
+          }
+          break;
+      }
+
+      // Always add main category link to allProducts if not already there
+      const mainCategoryLink = categories[category].subcategories.allProducts.find(
+        item => item.to === `/collections/${category}`
+      );
+      if (!mainCategoryLink) {
+        categories[category].subcategories.allProducts.unshift({
+          title: `All ${categories[category].displayName}`,
+          to: `/collections/${category}`,
+          badge: 'FEATURED',
+          available: true
+        });
+      }
+    });
+
+    return categories;
   }
 
   /**
@@ -283,7 +459,7 @@ export class NavigationManager {
   getCollectionStats(): { total: number; withProducts: number; lastSync: Date | null } {
     return {
       total: this.collectionsCache.length,
-      withProducts: this.collectionsCache.filter(c => c.productsCount > 0).length,
+      withProducts: this.collectionsCache.filter(c => c.products.nodes.length > 0).length,
       lastSync: this.lastSync,
     };
   }

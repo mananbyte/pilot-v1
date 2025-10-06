@@ -24,7 +24,6 @@ const SMART_COLLECTION_QUERY = `#graphql
     $last: Int
     $startCursor: String
     $endCursor: String
-    $filters: [ProductFilter!]
     $sortKey: ProductCollectionSortKeys
     $reverse: Boolean
   ) @inContext(country: $country, language: $language) {
@@ -49,7 +48,6 @@ const SMART_COLLECTION_QUERY = `#graphql
         last: $last,
         before: $startCursor,
         after: $endCursor,
-        filters: $filters,
         sortKey: $sortKey,
         reverse: $reverse
       ) {
@@ -252,7 +250,6 @@ async function tryExactCollection(
       variables: {
         handle,
         first: 20,
-        filters: searchParams.filters,
         sortKey: searchParams.sortKey,
         reverse: searchParams.reverse,
       },

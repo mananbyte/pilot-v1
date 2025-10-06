@@ -1,5 +1,5 @@
 @import "swiper/css" layer(base);
-@import "tailwindcss" source("../../app");
+@import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
 @theme {
@@ -81,6 +81,7 @@
     ease-out forwards;
   --animate-slide-down: slideDown 0.3s ease-out forwards;
   --animate-slide-up: slideUp 0.3s ease-out forwards;
+  --animate-announcement-progress: announcement-progress 3.5s linear infinite;
 
   @keyframes slideDown {
     0% {
@@ -202,6 +203,14 @@
     }
     100% {
       transform: scaleX(1);
+    }
+  }
+  @keyframes announcement-progress {
+    0% {
+      width: 0%;
+    }
+    100% {
+      width: 100%;
     }
   }
 }
