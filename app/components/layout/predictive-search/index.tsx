@@ -28,9 +28,10 @@ export function PredictiveSearchButton() {
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger
         asChild
-        className="hidden h-8 w-8 items-center justify-center focus-visible:outline-hidden lg:flex"
+        className="flex h-8 w-8 items-center justify-center focus-visible:outline-hidden hover:bg-gray-100 rounded-full transition-colors"
+        title="Search"
       >
-        <button type="button">
+        <button type="button" aria-label="Open search">
           <MagnifyingGlassIcon className="h-5 w-5" />
         </button>
       </Dialog.Trigger>
@@ -57,8 +58,9 @@ export function PredictiveSearchButton() {
           <div className="relative pt-(--topbar-height)">
             <PredictiveSearchForm>
               {({ fetchResults, inputRef }) => (
-                <div className="mx-auto w-[560px] max-w-[90vw] py-6 space-y-2">
-                  <div className="flex items-center gap-3 border border-line-subtle px-3">
+                <div className="mx-auto w-[560px] max-w-[90vw] py-6 space-y-4">
+                  {/* Search Input Field */}
+                  <div className="flex items-center gap-3 border border-line-subtle px-3 bg-white rounded-md shadow-sm">
                     <MagnifyingGlassIcon className="h-5 w-5 shrink-0 text-gray-500" />
                     <input
                       name="q"
@@ -77,14 +79,31 @@ export function PredictiveSearchButton() {
                           }
                         }
                       }}
-                      placeholder="Enter a keyword"
+                      placeholder="Search products, brands, categories..."
                       ref={inputRef}
                       autoComplete="off"
-                      className="h-full w-full py-4 focus-visible:outline-hidden"
+                      className="h-full w-full py-4 text-gray-900 placeholder-gray-500 bg-transparent focus-visible:outline-hidden"
                     />
                     <button
+                      type="submit"
+                      className="shrink-0 px-3 py-2 text-white bg-black rounded hover:bg-gray-800 transition-colors"
+                      onClick={() => {
+                        if (inputRef.current) {
+                          const query = inputRef.current.value.trim();
+                          if (query) {
+                            const locale = params.locale
+                              ? `/${params.locale}`
+                              : "";
+                            window.location.href = `${locale}/search?q=${encodeURIComponent(query)}`;
+                          }
+                        }
+                      }}
+                    >
+                      Search
+                    </button>
+                    <button
                       type="button"
-                      className="shrink-0 p-1 text-gray-500"
+                      className="shrink-0 p-1 text-gray-500 hover:text-gray-700"
                       onClick={() => {
                         if (inputRef.current) {
                           inputRef.current.value = "";
@@ -95,14 +114,18 @@ export function PredictiveSearchButton() {
                       <XIcon className="h-5 w-5" />
                     </button>
                   </div>
-                  <PopularKeywords
-                    onKeywordClick={(keyword) => {
-                      if (inputRef.current) {
-                        inputRef.current.value = keyword;
-                        fetchResults(keyword);
-                      }
-                    }}
-                  />
+                  
+                  {/* Popular Keywords Section */}
+                  <div className="pt-2 border-t border-line-subtle">
+                    <PopularKeywords
+                      onKeywordClick={(keyword) => {
+                        if (inputRef.current) {
+                          inputRef.current.value = keyword;
+                          fetchResults(keyword);
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </PredictiveSearchForm>
