@@ -35,15 +35,17 @@ export function PredictiveSearchButton() {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay
-          className="fixed inset-0 z-10 bg-black/50 data-[state=open]:animate-fade-in"
+          className="fixed inset-0 z-40 bg-black/50 data-[state=open]:animate-fade-in"
           style={{ "--fade-in-duration": "100ms" } as React.CSSProperties}
         />
         <Dialog.Content
           className={cn([
-            "fixed inset-x-0 top-0 z-10 bg-(--color-header-bg)",
+            "fixed inset-x-0 z-50 bg-(--color-header-bg)",
+            "top-[calc(var(--topbar-height,0px)+5rem)]",
             "-translate-y-full data-[state=open]:translate-y-0",
             "data-[state=open]:animate-enter-from-top",
             "focus-visible:outline-hidden",
+            "shadow-lg border-b border-gray-200/50",
           ])}
           style={
             { "--enter-from-top-duration": "200ms" } as React.CSSProperties
@@ -53,7 +55,7 @@ export function PredictiveSearchButton() {
           <VisuallyHidden.Root asChild>
             <Dialog.Title>Predictive search</Dialog.Title>
           </VisuallyHidden.Root>
-          <div className="relative pt-(--topbar-height)">
+          <div className="relative">
             <PredictiveSearchForm>
               {({ fetchResults, inputRef }) => (
                 <div className="mx-auto w-[560px] max-w-[90vw] py-6 space-y-2">
